@@ -15,52 +15,94 @@ preferences:
 esp32:
   board: nodemcu-32s
   framework:
-    type: arduino
+    type: esp-idf
 
-# pid climate log update is noisy, dial it back to warn
+# Enable logging via UART
 logger:
   level: DEBUG
-  logs:
-    climate: ERROR
+  #logs:
     # component includes the custom component, which file the error "Components should block for at most 20-30ms."
     # https://github.com/esphome/issues/issues/4717
-    component: ERROR
+    #component: ERROR
 
 # default HA integration, OTA updater and backup http web portal
 api:
+  # TODO increase the security
   # password: !secret device_password
+  #encryption:
+  #  key: "YOUR_ENCRYPTION_KEY"
+  # 5m default delay. if no home assistant, then force reboot
+  reboot_timeout: 0s
+
 ota:
-  platform: esphome
+  - platform: esphome
+  # TODO increase the security
   # password: !secret device_password
+  # change to https://esphome.io/components/ota/http_request ?
+
 wifi:
-  # Read the wifi/pass from secrets.yaml:
-  # wifi_ssid: "My Wifi XX"
-  # wifi_password: "XXXXXXX"
-  ssid: !secret wifi_ssid
-  password: !secret wifi_password
+  # Read the wifi/pass from secrets.yaml and support 2 SSID
+  networks:
+  - ssid: !secret wifi_1_ssid
+    password: !secret wifi_1_password
+  - ssid: !secret wifi_2_ssid
+    password: !secret wifi_2_password
 
 web_server:
   port: 80
+  version: 3
 
 text_sensor:
-
-  # Send IP Address
-  - platform: wifi_info
-    ip_address:
-      name: "${friendly_name} IP Address"
-
+  - platform: version
+    name: "ESPHome Version"
+    icon: mdi:information
+    hide_timestamp: true
   # Send Uptime in raw seconds
   - platform: template
-    name: "${friendly_name} Uptime"
+    name: "Uptime"
     id: uptime_human
     icon: mdi:clock-start
+  - platform: wifi_info
+    ip_address:
+      name: "IP Address"
+    mac_address:
+      name: "MAC Address"
+  - platform: template
+    name: "Hostname"
+    id: kl_hostname_ts
+    icon: mdi:network
+    entity_category: "diagnostic"
+    update_interval: 60s
+    # framework esp-idf dependant
+    lambda: |-
+      const char *hostname;
+      esp_netif_get_hostname(esp_netif_get_handle_from_ifkey("WIFI_STA_DEF"), &hostname);
+      return std::string(hostname);
 
 sensor:
-
-  # Send WiFi signal strength & uptime to HA
   - platform: wifi_signal
-    name: "${friendly_name} WiFi Strength"
-    update_interval: 60s
+    name: "WiFi Signal dB"
+    id: wifi_signal_db
+    update_interval: 60s # Check every minute
+    entity_category: "diagnostic"
+    filters:
+      - sliding_window_moving_average: # Smooth out data to prevent false triggers
+          window_size: 3
+          send_every: 1
+    on_value:
+      then:
+        - if:
+            condition:
+              and:
+                - wifi.connected:
+                - lambda: 'return x < -80;' # Trigger if signal is worse than -80dB
+            then:
+              - logger.log: "WiFi Signal is below -80dB. Forcing scan for better BSSID..."
+              # There is no "roam" command, so we toggle WiFi to force a new scan/connect
+              - wifi.disable:
+              - delay: 2s
+              - wifi.enable:
+
 
   # This is a bit of overkill. It sends a human readable
   # uptime string 1h 41m 32s instead of 6092 seconds
@@ -90,36 +132,66 @@ sensor:
 
   # Read the level of the salt
   - platform: ultrasonic
+    id: salt_meter
     trigger_pin: GPIO32
     echo_pin: GPIO12
     name: "Ultrasonic Sensor"
-    update_interval: 2s
-    accuracy_decimals: 1
+    update_interval: 5s
+    accuracy_decimals: 0
     unit_of_measurement: "cm"
     filters:
-      # show the value in cm
+      # Convert meters to cm
       - multiply: 100
-      # calculate the median, take in account 10 values, send it out every 5 of it
+
+      # 1. Remove outliers (spikes) using a median filter
+      # calculate the median, take in account 20 values, send it out every 10 of it
       - median:
-          window_size: 10
-          send_every: 5
+          window_size: 20
+          send_every: 10
           send_first_at: 3
 
-switch:
-  # Expose an ESP32 restart button to HA
-  - platform: restart
-    name: "${friendly_name} ESP32 Restart"
-    id: automate_fan_restart
+      # 2. Smooth the line using a moving average
+      # This averages the last 15 values to keep the line "straight"
+      - sliding_window_moving_average:
+          window_size: 15
+          send_every: 1
 
-# Restart every day at 12:30am.
-# I've had some memory issues lockup
-# the device after a couple weeks
+      # 3. Ensure the final output is rounded to the nearest integer
+      - lambda: return round(x);
+
+button:
+  - platform: restart
+    name: "ESPHome Restart"
+    entity_category: "config"
+  - platform: template
+    name: "Clear Stored States"
+    id: clear_states_button
+    icon: "mdi:database-remove"
+    entity_category: "config"
+    on_press:
+      then:
+        - lambda: |-
+            global_preferences->reset();
+            ESP_LOGI("custom", "NVM Memory Cleared! Restarting...");
+        - delay: 1s
+        # This is the correct way to reboot via code
+        - lambda: 'App.safe_reboot();'
+
 time:
-  - platform: homeassistant
-    on_time:
-      # Every morning at 12:30am
-      - seconds: 0
-        minutes: 30
-        hours: 0
-        then:
-          - switch.turn_on: automate_fan_restart
+  - platform: sntp
+    id: sntp_time
+    timezone: "Europe/Rome"
+    # No servers defined = use DHCP provided servers
+
+## Restart every day at 12:30am.
+## I've had some memory issues lockup
+## the device after a couple weeks
+#time:
+#  - platform: homeassistant
+#    on_time:
+#      # Every morning at 12:30am
+#      - seconds: 0
+#        minutes: 30
+#        hours: 0
+#        then:
+#          - switch.turn_on: automate_fan_restart
