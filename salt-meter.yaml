@@ -135,7 +135,7 @@ sensor:
     id: salt_meter
     trigger_pin: GPIO32
     echo_pin: GPIO12
-    name: "Ultrasonic Sensor"
+    name: "Sale Rimanente - cm"
     update_interval: 5s
     accuracy_decimals: 0
     unit_of_measurement: "cm"
@@ -158,6 +158,33 @@ sensor:
 
       # 3. Ensure the final output is rounded to the nearest integer
       - lambda: return round(x);
+
+      # 4. Maximum distance: 49cm
+      - clamp:
+          min_value: 0
+          max_value: 49
+
+      # 5. Invert: convert distance-from-sensor to salt height in cm
+      - lambda: return 49.0f - x;
+
+    on_value:
+      then:
+        - component.update: salt_level_percent
+
+  - platform: template
+    name: "Sale Rimanente - %"
+    id: salt_level_percent
+    unit_of_measurement: "%"
+    device_class: moisture
+    state_class: measurement
+    icon: mdi:shaker-outline
+    update_interval: never
+    lambda: |-
+      // salt_meter now reads cm of salt (0 = empty, 49 = full)
+      const float MAX_CM = 49.0;
+      if (isnan(id(salt_meter).state)) return {};
+      float pct = id(salt_meter).state / MAX_CM * 100.0f;
+      return clamp(pct, 0.0f, 100.0f);
 
 button:
   - platform: restart
