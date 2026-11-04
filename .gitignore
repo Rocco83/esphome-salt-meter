@@ -1,8 +1,36 @@
-# Gitignore settings for ESPHome
-# This is an example and may include too much for your use-case.
-# You can modify this file to suit your needs.
-/.esphome/
-/secrets.yaml
-/.platformio/
+# ESPHome
+.esphome/
+.platformio/
+.cache/
+secrets.yaml
+
+# Editor
 .vscode
+*.bak
+*.tmp
+*.swp
+*.swo
+*.swn
+
+# macOS metadata (AppleDouble sidecars, Finder state, resource forks)
 .DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+.AppleDouble
+.LSOverride
+.fseventsd
+.TemporaryItems
+.VolumeIcon.icns
+.apdisk
+__MACOSX/
+
+# Windows
+Thumbs.db
+ehthumbs.db
+
+
+# Machine-specific Claude instructions (device address, local build wrapper)
+CLAUDE.local.md
+CLAUDE-private.md
