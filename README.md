@@ -117,11 +117,15 @@ The long-term statistics (since 2026-03-25) are keyed by entity_id, so they also
 ids are reclaimed. Order:
 
 1. Flash the new board and check it on the bench (web UI on port 80).
-2. **Power off the old meter** first, otherwise HA rediscovers it and step 3 undoes itself.
-3. In HA, *Settings → Devices & services → ESPHome*, **remove the `salt-meter` integration entry**
+2. **Power off the old meter** first, otherwise HA rediscovers it and step 4 undoes itself.
+3. **Clear the old device's area** (it is in `garage`) and note it. HA prefixes the area name to
+   the entity_ids of *newly created* entities, so adopting into an area gives
+   `sensor.garage_salt_meter_sale_rimanente_cm` instead of the id the automation uses.
+4. In HA, *Settings → Devices & services → ESPHome*, **remove the `salt-meter` integration entry**
    (not just the device). This frees every old entity_id.
-4. Adopt the new `salt-meter`. Check that the two entity_ids above exist without a `_2`, that the
-   salt automation resolves them, and that the history continues across the swap.
+5. Adopt the new `salt-meter`. Check that the two entity_ids above exist with no area prefix and no
+   `_2`, that the salt automation resolves them, and that the history continues across the swap.
+6. Put the device back in its area. Changing an area never renames existing entities.
 
 Changed from the old firmware, so these entity_ids change or disappear:
 
