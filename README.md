@@ -51,10 +51,15 @@ DevKit outside the lid.
 ### Level calculation
 
 ```
-distance  = median of ~5 s of frames, averaged over 60 s       ("Distanza Sensore")
+distance  = median of ~2.5 s of frames, averaged over 60 s
+            + Offset Sensore                                 ("Distanza Sensore")
 height    = clamp(Distanza Fondo - distance, 0, Distanza Fondo - Distanza Pieno)
 percent   = height / (Distanza Fondo - Distanza Pieno) * 100
 ```
+
+`Offset Sensore` (default 2.0 cm) corrects for the transducer sitting inside the module: without
+it, a target 50 cm from the module's face reads 48 cm. Checked every 10 cm on 2026-11-05. The
+per-frame UART log shows the raw value, without the offset.
 
 `Distanza Fondo` (sensor face to tank bottom) and `Distanza Pieno` (sensor face to the
 "full" level) are `number` entities, changeable from HA and stored in flash. The defaults
@@ -76,6 +81,7 @@ The `a02yyuw` component validates each frame's checksum and drops readings ≤ 3
 | `Sale Rimanente - %` | the same as a percentage of the usable depth |
 | `Distanza Sensore` | filtered distance from the sensor face (diagnostic, for calibration) |
 | `Distanza Fondo` / `Distanza Pieno` | geometry (config) |
+| `Offset Sensore` | added to every distance, module face vs. transducer (config) |
 | `Calibra Fondo` | sets `Distanza Fondo` from the current distance (config) |
 | `Sensor` | connectivity: off = no valid frame for 10 s (cable, power, sensor fault) |
 | `ESPHome Restart` | marks the OTA image valid first, so `safe_mode` does not count it as a failed boot |

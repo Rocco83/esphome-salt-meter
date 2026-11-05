@@ -14,6 +14,10 @@ substitutions:
   # A02YYUW cannot see closer than 3 cm (blind zone), so anything below 3
   # can never read 100 %.
   full_distance_default: "0"
+  # The A02YYUW measures from its transducer face, which sits inside the
+  # module: a target 50 cm from the module's face reads 48 cm. Added to
+  # every distance. Measured 2026-11-05, checked every 10 cm.
+  sensor_offset_default: "2.0"
 
   # Sensor UART RX on the ESP32 (sensor TX, white wire). Not strapping,
   # not USB-JTAG, not UART0.
@@ -207,6 +211,20 @@ interval:
 
 number:
   - platform: template
+    name: "Offset Sensore"
+    id: sensor_offset
+    icon: mdi:ruler
+    entity_category: config
+    unit_of_measurement: "cm"
+    mode: box
+    min_value: -10
+    max_value: 10
+    step: 0.1
+    initial_value: ${sensor_offset_default}
+    optimistic: true
+    restore_value: true
+
+  - platform: template
     name: "Distanza Fondo"
     id: empty_distance
     icon: mdi:arrow-collapse-down
@@ -271,6 +289,8 @@ sensor:
       # Salt goes down over days: one value per minute is plenty in
       # production (publish_interval, BACKLOG.md #1)
       - throttle_average: ${publish_interval}
+      # distance from the module's face, not from the transducer inside it
+      - lambda: return x + id(sensor_offset).state;
 
   # Salt height above the bottom: 0 = empty, "Distanza Fondo" - "Distanza Pieno" = full
   - platform: copy
