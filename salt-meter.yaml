@@ -48,7 +48,8 @@ safe_mode:
 # ESP32 AND NETWORK SETUP
 
 esp32:
-  board: esp32-c6-devkitc-1
+  # ESP32-C6FH4: 4 MB flash embedded in the chip
+  board: esp32-c6-devkitm-1
   framework:
     type: esp-idf
 

@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this is
 
-ESPHome firmware for the water softener salt meter: an ESP32-C6 (DevKitC-1, `esp-idf`) reading
+ESPHome firmware for the water softener salt meter: an ESP32-C6FH4 (4 MB, `board: esp32-c6-devkitm-1`, `esp-idf`) reading
 a DFRobot A02YYUW UART ultrasonic sensor, wired directly with no breakout PCB. Hardware, wiring,
 calibration and the entity list are in `README.md`. ESPHome generates the firmware project into
 `.esphome/` (gitignored build output, do not hand-edit).

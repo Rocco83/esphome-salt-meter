@@ -15,8 +15,8 @@ its Home Assistant entities, see [Replacing the old meter](#replacing-the-old-me
 
 ## Hardware
 
-- **MCU**: ESP32-C6 DevKit (`board: esp32-c6-devkitc-1`, 8 MB flash). On a DevKitM-1 (4 MB),
-  change the board line.
+- **MCU**: ESP32-C6FH4 board (4 MB flash in the chip), `board: esp32-c6-devkitm-1`, the 4 MB
+  layout. It also runs on an 8 MB DevKitC-1, which just leaves flash unused.
 - **Sensor**: DFRobot A02YYUW (SEN0311), 3–450 cm, 3 cm blind zone, IP67 probe, UART output.
 - **Power**: USB into the DevKit. The sensor draws < 10 mA from the DevKit 3V3 pin.
 
