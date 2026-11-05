@@ -1,8 +1,11 @@
 # Backlog
 
-## Before production (cutover)
+## Firmware
 
 | # | Item | Notes |
 |---|---|---|
-| 1 | **`publish_interval` and `frame_summary_interval` back to 60s** | 5s only to make calibration quick. At 60s, `median` (25 frames, ~2.5 s) feeds `throttle_average` over a minute; the README's "one value a minute" assumes that. |
-| 2 | **Remove or quiet the UART byte log** | `uart: debug:` logs every frame (~10 lines/s) at DEBUG. Drop the `uart.debug.log_hex` action (keep the counting lambda that feeds the frame summary) or remove the whole `debug:` block together with the frame counters and the `interval:`. |
+| 1 | **Weak Wi-Fi at the tank** | −86 dBm on 2026-11-05 in place, on the C6FH4's PCB antenna. It works (2.5 h uptime from power-on), but it sits at the edge. Options: move the board out from behind the cabinet or metal, a closer AP, or a board with an external antenna (u.FL). Watch `WiFi Signal` and HA unavailability in history. |
+
+## Done
+
+- 2026-11-05 Calibration mode removed: `publish_interval` and `frame_summary_interval` back to 60s. The per-frame decoded log moved to VERBOSE (compiled out at the current DEBUG level).

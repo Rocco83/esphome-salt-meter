@@ -27,9 +27,9 @@ substitutions:
   sensor_timeout_ms: "10000"
 
   # How often the level reaches HA, and how often the frame summary is
-  # logged. 5s while calibrating; 60s in production (BACKLOG.md #1).
-  publish_interval: 5s
-  frame_summary_interval: 5s
+  # logged. 5s is handy while calibrating; salt goes down over days.
+  publish_interval: 60s
+  frame_summary_interval: 60s
 
 esphome:
   name: salt-meter
@@ -115,9 +115,10 @@ uart:
   id: uart_sensor
   rx_pin: ${sensor_rx_pin}
   baud_rate: 9600
-  # Calibration aid (BACKLOG.md #2): log every byte as it arrives, one
-  # line per frame (4 bytes take ~4 ms, frames come ~100 ms apart), and
-  # classify the frames for the frame_summary interval.
+  # Classify every frame for the frame_summary interval (4 bytes take
+  # ~4 ms, frames come ~100 ms apart). Each frame is also logged decoded,
+  # "<<< FF:04:35:38 - 107.7 cm", at VERBOSE: to see them, set
+  # logger: level: VERBOSE (compile-time) and logs: uart_debug: VERBOSE.
   debug:
     direction: RX
     after:
@@ -126,7 +127,7 @@ uart:
       - lambda: |-
           // A chunk that is not exactly one frame: dump it raw as well
           if (bytes.size() != 4 || bytes[0] != 0xFF)
-            UARTDebug::log_hex(direction, bytes, ':');
+            ESP_LOGW("uart_debug", "%u bytes not in a single frame", (unsigned) bytes.size());
           for (size_t i = 0; i + 4 <= bytes.size(); ) {
             if (bytes[i] != 0xFF) { i++; continue; }
             uint8_t sum = bytes[i] + bytes[i + 1] + bytes[i + 2];
@@ -143,7 +144,7 @@ uart:
               id(fr_blind)++;
               note = "  (blind zone)";
             }
-            ESP_LOGD("uart_debug", "<<< %02X:%02X:%02X:%02X - %.1f cm%s",
+            ESP_LOGV("uart_debug", "<<< %02X:%02X:%02X:%02X - %.1f cm%s",
                      bytes[i], bytes[i + 1], bytes[i + 2], bytes[i + 3], mm / 10.0f, note);
             if (!*note) {
               id(fr_valid)++;
@@ -286,8 +287,7 @@ sensor:
           window_size: 25
           send_every: 25
           send_first_at: 5
-      # Salt goes down over days: one value per minute is plenty in
-      # production (publish_interval, BACKLOG.md #1)
+      # Salt goes down over days: one value per publish_interval
       - throttle_average: ${publish_interval}
       # distance from the module's face, not from the transducer inside it
       - lambda: return x + id(sensor_offset).state;
