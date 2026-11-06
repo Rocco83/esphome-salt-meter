@@ -109,16 +109,17 @@ time:
 #########################
 # SALT LEVEL
 
-# A02YYUW: 9600 8N1, the sensor only talks. Its RX (yellow wire) is left
-# unconnected: internal pull-up = "processed" mode, filtered output ~every 100 ms.
+# A02YYUW: 9600 8N1, the sensor only talks. Its RX (yellow wire) is tied to
+# GND: "real-time" mode, a raw reading every ~100 ms with no filtering inside
+# the sensor (the median below does that). Unconnected or high would be
+# "processed" mode, which filters internally and can hold a value.
 uart:
   id: uart_sensor
   rx_pin: ${sensor_rx_pin}
   baud_rate: 9600
   # Classify every frame for the frame_summary interval (4 bytes take
-  # ~4 ms, frames come ~100 ms apart). Each frame is also logged decoded,
-  # "<<< FF:04:35:38 - 107.7 cm", at VERBOSE: to see them, set
-  # logger: level: VERBOSE (compile-time) and logs: uart_debug: VERBOSE.
+  # ~4 ms, frames come ~100 ms apart). With the "Log Frame" switch on, each
+  # frame is also logged decoded: "<<< FF:04:35:38 - 107.7 cm".
   debug:
     direction: RX
     after:
@@ -144,7 +145,8 @@ uart:
               id(fr_blind)++;
               note = "  (blind zone)";
             }
-            ESP_LOGV("uart_debug", "<<< %02X:%02X:%02X:%02X - %.1f cm%s",
+            if (id(frame_log).state)
+              ESP_LOGD("uart_debug", "<<< %02X:%02X:%02X:%02X - %.1f cm%s",
                      bytes[i], bytes[i + 1], bytes[i + 2], bytes[i + 3], mm / 10.0f, note);
             if (!*note) {
               id(fr_valid)++;
@@ -355,6 +357,17 @@ binary_sensor:
     entity_category: diagnostic
     lambda: |-
       return id(last_frame_ms) != 0 && millis() - id(last_frame_ms) < ${sensor_timeout_ms};
+
+switch:
+  # ~10 log lines a second while on: for checking the sensor live, then off.
+  # Always off after a boot, so it cannot be left on by a restart.
+  - platform: template
+    name: "Log Frame"
+    id: frame_log
+    icon: mdi:text-box-search-outline
+    entity_category: config
+    optimistic: true
+    restore_mode: ALWAYS_OFF
 
 button:
   # Set "Distanza Fondo" to the current distance. Press with the tank empty

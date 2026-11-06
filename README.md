@@ -31,7 +31,7 @@ at **3.3 V**, so its TX swings 0–3.3 V and needs no level shifter. Powered at 
 | red, VCC | 3V3 | **not** 5V, see above |
 | black, GND | GND | |
 | white, TX | GPIO6 | UART RX, 9600 8N1 |
-| yellow, RX | not connected | internal pull-up = processed mode, ~100 ms frames |
+| yellow, RX | GND | real-time mode: raw reading every ~100 ms, no filtering inside the sensor |
 
 GPIO6 is not a strapping pin (C6: 4, 5, 8, 9, 15) and leaves GPIO12/13 (USB-Serial-JTAG,
 logs and flashing) and GPIO16/17 (UART0) free. To use another pin, change `sensor_rx_pin`.
@@ -83,6 +83,7 @@ The `a02yyuw` component validates each frame's checksum and drops readings ≤ 3
 | `Distanza Fondo` / `Distanza Pieno` | geometry (config) |
 | `Offset Sensore` | added to every distance, module face vs. transducer (config) |
 | `Calibra Fondo` | sets `Distanza Fondo` from the current distance (config) |
+| `Log Frame` | logs every frame decoded, `<<< FF:04:35:38 - 107.7 cm` (~10 lines/s); off after every boot (config) |
 | `Sensor` | connectivity: off = no valid frame for 10 s (cable, power, sensor fault) |
 | `ESPHome Restart` | marks the OTA image valid first, so `safe_mode` does not count it as a failed boot |
 | `Clear Stored States` | wipes flash preferences (geometry back to the defaults) and restarts |
